@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload and Display JSON Structure</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            padding: 20px;
+        }
+        .tree {
+            list-style-type: none;
+            padding-left: 20px;
+        }
+        .tree li {
+            margin: 10px 0;
+        }
+        .tree li::before {
+            content: "";
+            border-left: 2px solid #000;
+            height: 100%;
+            position: absolute;
+            left: -20px;
+            top: 0;
+        }
+        .tree .node {
+            position: relative;
+            padding-left: 30px;
+        }
+        .tree .node > .name {
+            font-weight: bold;
+            color: #333;
+        }
+        .tree .node > .description {
+            font-style: italic;
+            color: #666;
+            font-size: 14px;
+        }
+        .node ul {
+            margin-top: 5px;
+        }
+        .node > .value, .node > .keywords, .node > .summary {
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Upload and Display JSON Structure</h1>
+    
+    <input type="file" id="jsonFile" accept=".json">
+    <button onclick="loadFile()">Load JSON</button>
+
+    <div id="errorMessage" style="color: red; display: none;"></div>
+
+    <ul id="tree" class="tree"></ul>
+
+    <script>
+        function loadFile() {
+            const fileInput = document.getElementById('jsonFile');
+            const errorMessage = document.getElementById('errorMessage');
+            const treeContainer = document.getElementById('tree');
+            
+            // Clear previous content
+            treeContainer.innerHTML = '';
+            errorMessage.style.display = 'none';
+
+            const file = fileInput.files[0];
+            if (!file) {
+                errorMessage.textContent = 'Please select a JSON file.';
+                errorMessage.style.display = 'block';
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                try {
+                    const data = JSON.parse(event.target.result);
+                    if (!data || !data['URBAN-SOCIAL-PLANNING']) {
+                        throw new Error('Invalid JSON structure.');
+                    }
+                    treeContainer.appendChild(createTree(data['URBAN-SOCIAL-PLANNING']));
+                } catch (e) {
+                    errorMessage.textContent = `Error parsing JSON: ${e.message}`;
+                    errorMessage.style.display = 'block';
+                }
+            };
+
+            reader.onerror = function() {
+                errorMessage.textContent = 'Error reading the file.';
+                errorMessage.style.display = 'block';
+            };
+
+            reader.readAsText(file);
+        }
+
+        function createTree(data) {
+            const ul = document.createElement('ul');
+            if (data._children) {
+                Object.keys(data._children).forEach(childKey => {
+                    const child = data._children[childKey];
+                    const li = document.createElement('li');
+                    li.classList.add('node');
+
+                    const nameDiv = document.createElement('div');
+                    nameDiv.classList.add('name');
+                    nameDiv.textContent = childKey;
+
+                    const titlesDiv = document.createElement('div');
+                    if (child._titles) {
+                        child._titles.forEach(title => {
+                            const titleP = document.createElement('p');
+                            titleP.classList.add('description');
+                            titleP.textContent = title;
+                            titlesDiv.appendChild(titleP);
+                        });
+                    }
+
+                    // Handle additional properties (_value, _keywords, _summary)
+                    if (child._value) {
+                        const valueDiv = document.createElement('div');
+                        valueDiv.classList.add('value');
+                        valueDiv.textContent = `Value: ${child._value}`;
+                        li.appendChild(valueDiv);
+                    }
+                    if (child._keywords) {
+                        const keywordsDiv = document.createElement('div');
+                        keywordsDiv.classList.add('keywords');
+                        keywordsDiv.textContent = `Keywords: ${child._keywords}`;
+                        li.appendChild(keywordsDiv);
+                    }
+                    if (child._summary) {
+                        const summaryDiv = document.createElement('div');
+                        summaryDiv.classList.add('summary');
+                        summaryDiv.textContent = `Summary: ${child._summary}`;
+                        li.appendChild(summaryDiv);
+                    }
+
+                    li.appendChild(nameDiv);
+                    li.appendChild(titlesDiv);
+
+                    if (child._children && Object.keys(child._children).length > 0) {
+                        li.appendChild(createTree(child));  // Recursive call for child nodes
+                    }
+
+                    ul.appendChild(li);
+                });
+            }
+            return ul;
+        }
+    </script>
+</body>
+</html>
